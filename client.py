@@ -1,11 +1,12 @@
 import socketio
+from time import sleep
 
 client = socketio.Client()  # logger=True)
 
 
-@client.event
-def connect():
-    print("Connected to server.")
+# @client.event
+# def connect():
+#    print("Connected to server.")
 
 
 @client.event
@@ -20,10 +21,10 @@ def disconnect():
 
 @client.event
 def message(data):
-    print(f"> {data['data']}")
+    print(f"{data['sid']}: {data['data']}")
 
 
 client.connect("http://0.0.0.0:5000")
 while True:
-    msg = input("> ")
+    msg = input("")
     client.emit("message", {"data": msg})

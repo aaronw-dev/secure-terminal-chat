@@ -19,7 +19,7 @@ messagelog = []
 
 
 def printHeader():
-    print(Fore.RED + "=" * UIWidth)
+    print(Fore.GREEN + "=" * UIWidth)
     # print("STC (Secure Terminal Chat) Server".center(UIWidth))
     header = """   ___ _____ ___   ___                      
   / __|_   _/ __| / __| ___ _ ___ _____ _ _ 
@@ -28,7 +28,7 @@ def printHeader():
     for line in header.splitlines():
         print(Fore.WHITE + line.center(UIWidth))
     print("version 1.0.1".rjust(UIWidth))
-    print(Fore.RED + "=" * UIWidth)
+    print(Fore.GREEN + "=" * UIWidth)
 
 
 def serverPrint(string):

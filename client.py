@@ -6,6 +6,7 @@ from datetime import datetime
 import logging
 import os
 from colorama import Fore, Back, Style, init
+import socketio.exceptions
 
 init(autoreset=True)
 size = os.get_terminal_size()
@@ -46,8 +47,6 @@ def printmessage(string):
     # now = datetime.now()
     # message = f"{Fore.YELLOW}[{now.strftime('%Y/%m/%d %H:%M:%S')}]{Fore.RESET} {string}"
     message = string
-    if (message.startswith("SERVER: ")):
-        message = Fore.MAGENTA + message
     print(message)
     messagelog.append(message)
 
@@ -82,12 +81,23 @@ def disconnect():
 @client.on("welcome")
 def welcome():
     printmessage("Connected to port 5000 on 127.0.0.1!")
-    client.emit("metadata", {"username": username})
+    while True:
+        try:
+            client.emit("metadata", {"username": username})
+            break
+        except socketio.exceptions.BadNamespaceError:
+            printmessage("Connection error")
+            continue
 
 
 @client.event
 def message(data):
-    printmessage(f"{data['username']}: {data['data']}")
+    message = data["data"]
+    if (data["username"] == "SERVER"):
+        printmessage(f"{Fore.MAGENTA}{data['username']}: {message}")
+    else:
+        printmessage(
+            f"{Fore.LIGHTGREEN_EX}{data['username']}{Fore.RESET}: {message}")
     refreshScreen()
 
 
@@ -98,6 +108,7 @@ while True:
     username = input("Enter username: ")
     if (username != ""):
         username = username.lower()
+        username = username.strip()
         break
 
 client.connect("http://127.0.0.1:5000")
@@ -107,7 +118,7 @@ while True:
     if (msg.startswith("/")):
         print("invoking a command!")
         continue
-    if (client.connected):
+    if (client.connected and msg.strip() != ""):
         client.emit("message", {"data": msg})
     else:
-        print("ruh roh")
+        refreshScreen()

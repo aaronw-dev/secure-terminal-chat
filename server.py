@@ -90,6 +90,7 @@ async def receivemetadata(sid, data):
 @server.event
 async def disconnect(sid):
     usermetadata = loggedusers[sid]
+    del (loggedusers[sid])
     username = usermetadata["username"].upper()
     serverPrint(f"{Fore.MAGENTA}USER [{username}]({sid}) DISCONNECTED.")
     await sendMessage(f"USER [{username}]({sid}) DISCONNECTED.")
@@ -99,7 +100,8 @@ async def disconnect(sid):
 async def message(sid, data):
     data["sid"] = sid
     data["username"] = loggedusers[sid]["username"]
-    serverPrint(f"{loggedusers[sid]['username']}: {data['data']}")
+    serverPrint(
+        f"{Fore.LIGHTGREEN_EX}{loggedusers[sid]['username']}{Fore.RESET}: {data['data']}")
     await server.emit("message", data)
     refreshScreen()
 

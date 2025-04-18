@@ -13,7 +13,8 @@ size = os.get_terminal_size()
 logging.basicConfig(level=logging.CRITICAL)
 UIWidth = size.columns
 messagelog = []
-clientversion = "1.0.1"
+clientversion = "1.0.4"
+loggedusers = {"SERVER": {"username": "SERVER"}}
 
 
 def clear_terminal():
@@ -58,12 +59,14 @@ def refreshScreen():
 
 
 async def sendMessage(string, sid="SERVER"):
-    await server.emit("message", {"sid": sid, "data": string})
+    # await server.emit("message", {"sid": sid, "data": string})
+    await server.emit("message", {"sid": sid, "data": string, "username": loggedusers[sid]["username"]})
 
 
 serverPrint(f"{Fore.LIGHTBLUE_EX}Initializing messaging server...")
 server = socketio.AsyncServer(
-    cors_allowed_origins="*", async_mode="aiohttp"
+    cors_allowed_origins="*",
+    async_mode="aiohttp"
 )  # ,logger=True)
 app = web.Application()
 server.attach(app)
@@ -73,20 +76,30 @@ serverPrint(f"{Fore.LIGHTBLUE_EX}Creating server bindings...")
 
 @server.event
 async def connect(sid, environ):
-    serverPrint(f"{Fore.MAGENTA}USER [{sid}] CONNECTED.")
-    await sendMessage(f"USER [{sid}] CONNECTED.")
+    await server.emit("welcome", to=sid)
+
+
+@server.on("metadata")
+async def receivemetadata(sid, data):
+    username = data["username"]
+    loggedusers[sid] = {"username": username}
+    serverPrint(f"{Fore.MAGENTA}USER [{username.upper()}]({sid}) CONNECTED.")
+    await sendMessage(f"USER [{username.upper()}]({sid}) CONNECTED.")
 
 
 @server.event
 async def disconnect(sid):
-    serverPrint(f"{Fore.MAGENTA}USER [{sid}] DISCONNECTED.")
-    await sendMessage(f"USER [{sid}] DISCONNECTED.")
+    usermetadata = loggedusers[sid]
+    username = usermetadata["username"].upper()
+    serverPrint(f"{Fore.MAGENTA}USER [{username}]({sid}) DISCONNECTED.")
+    await sendMessage(f"USER [{username}]({sid}) DISCONNECTED.")
 
 
 @server.event
 async def message(sid, data):
     data["sid"] = sid
-    serverPrint(f"{sid}: {data['data']}")
+    data["username"] = loggedusers[sid]["username"]
+    serverPrint(f"{loggedusers[sid]['username']}: {data['data']}")
     await server.emit("message", data)
     refreshScreen()
 

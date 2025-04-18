@@ -1,3 +1,4 @@
+import platform
 from time import sleep
 import socketio
 from aiohttp import web
@@ -8,14 +9,17 @@ import asyncio
 from colorama import Fore, Back, Style, init
 
 init(autoreset=True)
-
 size = os.get_terminal_size()
-
 logging.basicConfig(level=logging.CRITICAL)
-
 UIWidth = size.columns
-
 messagelog = []
+clientversion = "1.0.1"
+
+
+def clear_terminal():
+    """Clears the terminal screen on any platform."""
+    command = "cls" if platform.system() == "Windows" else "clear"
+    os.system(command)
 
 
 def printHeader():
@@ -26,24 +30,29 @@ def printHeader():
   \__ \ | || (__  \__ \/ -_) '_\ V / -_) '_|
  |___/ |_| \___| |___/\___|_|  \_/\___|_|"""
     for line in header.splitlines():
-        print(Fore.WHITE + line.center(UIWidth))
-    print("version 1.0.1".rjust(UIWidth))
+        print(Fore.GREEN + line.center(UIWidth))
+    print(Fore.GREEN + f"version {clientversion}".rjust(UIWidth))
     print(Fore.GREEN + "=" * UIWidth)
 
 
 def serverPrint(string):
     now = datetime.now()
-    message = f"[{now.strftime('%Y/%m/%d %H:%M:%S')}] {string}"
+    message = f"{Fore.YELLOW}[{now.strftime('%Y/%m/%d %H:%M:%S')}]{Fore.RESET} {string}"
     print(message)
     messagelog.append(message)
 
 
 def refreshScreen():
-    os.system("clear")
+    clear_terminal()
     printHeader()
     logs = messagelog.copy()
-    if len(logs) > size.lines - 7:
-        logs = messagelog[len(logs) - size.lines - 7 :]
+    logthreshold = size.lines - 8
+    overflow = len(logs) - logthreshold
+    # print("length: " + str(len(logs)))
+    # print("threshold: " + str(logthreshold))
+    # print("overflow: " + str(overflow))
+    if overflow >= 0:
+        logs = messagelog[-logthreshold:]
     for message in logs:
         print(message)
 
@@ -52,25 +61,25 @@ async def sendMessage(string, sid="SERVER"):
     await server.emit("message", {"sid": sid, "data": string})
 
 
-serverPrint("Initializing messaging server...")
+serverPrint(f"{Fore.LIGHTBLUE_EX}Initializing messaging server...")
 server = socketio.AsyncServer(
     cors_allowed_origins="*", async_mode="aiohttp"
 )  # ,logger=True)
 app = web.Application()
 server.attach(app)
 
-serverPrint("Creating server bindings...")
+serverPrint(f"{Fore.LIGHTBLUE_EX}Creating server bindings...")
 
 
 @server.event
 async def connect(sid, environ):
-    serverPrint(f"USER [{sid}] CONNECTED.")
+    serverPrint(f"{Fore.MAGENTA}USER [{sid}] CONNECTED.")
     await sendMessage(f"USER [{sid}] CONNECTED.")
 
 
 @server.event
 async def disconnect(sid):
-    serverPrint(f"USER [{sid}] DISCONNECTED.")
+    serverPrint(f"{Fore.MAGENTA}USER [{sid}] DISCONNECTED.")
     await sendMessage(f"USER [{sid}] DISCONNECTED.")
 
 
@@ -83,15 +92,16 @@ async def message(sid, data):
 
 
 async def start_server():
-    os.system("clear")
+    os.system(f"title Secure Terminal Chat Server v{clientversion}")
+    clear_terminal()
     printHeader()
-    serverPrint("Starting messaging server...")
+    serverPrint(f"{Fore.LIGHTBLUE_EX}Starting messaging server...")
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, host="0.0.0.0", port=5000)
+    site = web.TCPSite(runner, host="127.0.0.1", port=5000)
     await site.start()
 
-    serverPrint("Messaging server booted!")
+    serverPrint(f"{Fore.LIGHTBLUE_EX}Messaging server booted!")
     refreshScreen()
 
     while True:

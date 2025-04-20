@@ -7,6 +7,7 @@ import logging
 import os
 import asyncio
 from colorama import Fore, Back, Style, init
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 init(autoreset=True)
 size = os.get_terminal_size()

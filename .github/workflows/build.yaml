@@ -29,16 +29,10 @@ jobs:
           # pip install -r requirements.txt
 
       - name: Build client executable
-        uses: Martin005/pyinstaller-action@v1.2.0
-        with:
-          script: client.py
-          options: --onefile --console
+        run: pyinstaller --onefile --console client.py
 
       - name: Build server executable
-        uses: Martin005/pyinstaller-action@v1.2.0
-        with:
-          script: server.py
-          options: --onefile --console
+        run: pyinstaller --onefile --console server.py
 
       - name: Upload executables
         uses: actions/upload-artifact@v4

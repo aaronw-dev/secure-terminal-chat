@@ -29,13 +29,13 @@ jobs:
           # pip install -r requirements.txt
 
       - name: Build client executable
-        uses: JackMcKew/pyinstaller-action@v1.0.0
+        uses: Martin005/pyinstaller-action@v1.2.0
         with:
           script: client.py
           options: --onefile --console
 
       - name: Build server executable
-        uses: JackMcKew/pyinstaller-action@v1.0.0
+        uses: Martin005/pyinstaller-action@v1.2.0
         with:
           script: server.py
           options: --onefile --console

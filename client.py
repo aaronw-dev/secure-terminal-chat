@@ -139,7 +139,11 @@ client.connect("http://127.0.0.1:5000")
 while True:
     msg = input("")
     if msg.startswith("/"):
-        print("invoking a command!")
+        command = msg
+        command = command[1:].strip()
+        splitcommand = command.split(" ")
+        command = splitcommand[0]
+        arguments = splitcommand[1:]
         continue
     if client.connected and msg.strip() != "":
         for sid, usermeta in loggedusers.items():

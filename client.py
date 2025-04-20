@@ -7,6 +7,7 @@ import logging
 import os
 from colorama import Fore, Back, Style, init
 import socketio.exceptions
+from crpt import generatekey, encrypt, decrypt
 
 init(autoreset=True)
 size = os.get_terminal_size()
@@ -38,15 +39,18 @@ def printHeader():
     for line in header.splitlines():
         print(headercolor + line.center(UIWidth))
     usernametext = f"username: {username}" if username != "" else ""
-    print(headercolor + f"{usernametext}" +
-          f"version {clientversion}".rjust(UIWidth - len(usernametext)))
+    print(
+        headercolor
+        + f"{usernametext}"
+        + f"version {clientversion}".rjust(UIWidth - len(usernametext))
+    )
     print(headercolor + "=" * UIWidth)
 
 
 def printmessage(string):
     # now = datetime.now()
     # message = f"{Fore.YELLOW}[{now.strftime('%Y/%m/%d %H:%M:%S')}]{Fore.RESET} {string}"
-    message = string
+    message = str(string)
     print(message)
     messagelog.append(message)
 
@@ -83,42 +87,64 @@ def welcome():
     printmessage("Connected to port 5000 on 127.0.0.1!")
     while True:
         try:
-            client.emit("metadata", {"username": username})
+            metadata = {"username": username, "publickey": publickey}
+            client.emit("metadata", metadata)
             break
         except socketio.exceptions.BadNamespaceError:
-            printmessage("Connection error")
+            sleep(0.5)
             continue
+
+
+@client.on("usersupdate")
+def usersupdate(data):
+    global loggedusers
+    loggedusers = data.copy()
 
 
 @client.event
 def message(data):
-    message = data["data"]
-    if (data["username"] == "SERVER"):
+    message = data["message"]
+    if data.get("encrypted"):
+        if data["encrypted"] == True:
+            message = decrypt(message, privatekey)
+    if data["username"] == "SERVER":
         printmessage(f"{Fore.MAGENTA}{data['username']}: {message}")
     else:
-        printmessage(
-            f"{Fore.LIGHTGREEN_EX}{data['username']}{Fore.RESET}: {message}")
+        printmessage(f"{Fore.LIGHTGREEN_EX}{data['username']}{Fore.RESET}: {message}")
     refreshScreen()
 
 
+def sendEncrypted(message, publickey, targetsid):
+    cipher = encrypt(message, publickey)
+    client.emit("message", {"message": cipher, "target": targetsid})
+
+
+loggedusers = {}
 username = ""
 os.system(f"title Secure Terminal Chat Distributed Client v{clientversion}")
 refreshScreen()
+keybytes = 2048
+print(f"{Fore.LIGHTMAGENTA_EX}Generating {keybytes} byte RSA key...")
+privatekey, publickey = generatekey(keybytes)
+print(f"{Fore.LIGHTMAGENTA_EX}RSA key successfully generated.")
+
 while True:
     username = input("Enter username: ")
-    if (username != ""):
+    if username != "":
         username = username.lower()
         username = username.strip()
         break
 
 client.connect("http://127.0.0.1:5000")
-
 while True:
     msg = input("")
-    if (msg.startswith("/")):
+    if msg.startswith("/"):
         print("invoking a command!")
         continue
-    if (client.connected and msg.strip() != ""):
-        client.emit("message", {"data": msg})
+    if client.connected and msg.strip() != "":
+        for sid, usermeta in loggedusers.items():
+            # printmessage(sid)
+            sendEncrypted(msg, usermeta["publickey"], sid)
+
     else:
         refreshScreen()

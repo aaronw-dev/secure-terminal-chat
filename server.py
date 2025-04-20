@@ -7,7 +7,6 @@ import logging
 import os
 import asyncio
 from colorama import Fore, Back, Style, init
-from cryptography.hazmat.primitives.asymmetric import rsa
 
 init(autoreset=True)
 size = os.get_terminal_size()
@@ -39,7 +38,9 @@ def printHeader():
 
 def serverPrint(string):
     now = datetime.now()
-    message = f"{Fore.YELLOW}[{now.strftime('%Y/%m/%d %H:%M:%S')}]{Fore.RESET} {string}"
+    message = (
+        f"{Fore.YELLOW}[{now.strftime('%Y/%m/%d %H:%M:%S.%f')}]{Fore.RESET} {string}"
+    )
     print(message)
     messagelog.append(message)
 
@@ -61,13 +62,20 @@ def refreshScreen():
 
 async def sendMessage(string, sid="SERVER"):
     # await server.emit("message", {"sid": sid, "data": string})
-    await server.emit("message", {"sid": sid, "data": string, "username": loggedusers[sid]["username"]})
+    await server.emit(
+        "message",
+        {
+            "sid": sid,
+            "message": string,
+            "username": loggedusers[sid]["username"],
+            "encrypted": False,
+        },
+    )
 
 
 serverPrint(f"{Fore.LIGHTBLUE_EX}Initializing messaging server...")
 server = socketio.AsyncServer(
-    cors_allowed_origins="*",
-    async_mode="aiohttp"
+    cors_allowed_origins="*", async_mode="aiohttp"
 )  # ,logger=True)
 app = web.Application()
 server.attach(app)
@@ -83,15 +91,19 @@ async def connect(sid, environ):
 @server.on("metadata")
 async def receivemetadata(sid, data):
     username = data["username"]
-    loggedusers[sid] = {"username": username}
+    publickey = data["publickey"]
+    loggedusers[sid] = {"username": username, "publickey": publickey}
     serverPrint(f"{Fore.MAGENTA}USER [{username.upper()}]({sid}) CONNECTED.")
+    filteredusers = loggedusers.copy()
+    del filteredusers["SERVER"]
+    await server.emit("usersupdate", filteredusers)
     await sendMessage(f"USER [{username.upper()}]({sid}) CONNECTED.")
 
 
 @server.event
 async def disconnect(sid):
     usermetadata = loggedusers[sid]
-    del (loggedusers[sid])
+    del loggedusers[sid]
     username = usermetadata["username"].upper()
     serverPrint(f"{Fore.MAGENTA}USER [{username}]({sid}) DISCONNECTED.")
     await sendMessage(f"USER [{username}]({sid}) DISCONNECTED.")
@@ -101,9 +113,16 @@ async def disconnect(sid):
 async def message(sid, data):
     data["sid"] = sid
     data["username"] = loggedusers[sid]["username"]
+    data["encrypted"] = True
+    sendto = data["target"]
+    # message = data["message"].decode("utf-8")
+    """serverPrint(
+        f"{Fore.LIGHTGREEN_EX}{loggedusers[sid]['username']}{Fore.RESET}: {data['message']}"
+    )"""
     serverPrint(
-        f"{Fore.LIGHTGREEN_EX}{loggedusers[sid]['username']}{Fore.RESET}: {data['data']}")
-    await server.emit("message", data)
+        f"{Fore.LIGHTGREEN_EX}{loggedusers[sid]['username']}{Fore.RESET} sent a message."
+    )
+    await server.emit("message", data, sendto)
     refreshScreen()
 
 

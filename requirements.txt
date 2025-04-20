@@ -1,0 +1,6 @@
+aiohttp==3.8.4
+cryptography==38.0.4
+colorama==0.4.6
+simple-websocket==1.0.0
+websockets==10.4
+websocket-client==1.2.3

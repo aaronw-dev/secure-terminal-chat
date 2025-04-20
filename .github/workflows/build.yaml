@@ -21,9 +21,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Set up Wine for Windows build
-        run: sudo apt-get update && sudo apt-get install -y wine
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -31,10 +28,10 @@ jobs:
           pip install -r requirements.txt
 
       - name: Build client executable
-        run: wine pyinstaller --onefile --console client.py
+        run: pyinstaller --onefile --console client.py
 
       - name: Build server executable
-        run: wine pyinstaller --onefile --console server.py
+        run: pyinstaller --onefile --console server.py
 
       - name: Upload executables
         uses: actions/upload-artifact@v4
